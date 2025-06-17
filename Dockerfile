@@ -6,10 +6,9 @@ WORKDIR /app
 
 # 라이브러리 설치
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# 시간대 설정 (tzdata 설치 후 Asia/Seoul 설정)
+# 도커 시간대 설정 -> 한국 시간대로
 RUN apt-get update && \
     apt-get install -y tzdata && \
     ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
