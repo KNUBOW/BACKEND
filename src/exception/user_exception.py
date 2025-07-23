@@ -6,7 +6,7 @@ class DuplicateEmailException(CustomException):
 
 class DuplicateNicknameException(CustomException):
     def __init__(self, detail: str = "이미 사용 중인 닉네임입니다"):
-        super().__init__(status_code=409, detxail=detail, code="NICKNAME_CONFLICT")
+        super().__init__(status_code=409, detail=detail, code="NICKNAME_CONFLICT")
 
 class InvalidCheckedPasswordException(CustomException):
     def __init__(self, detail: str = "비밀번호와 비밀번호 확인이 일치하지 않습니다"):

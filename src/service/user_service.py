@@ -89,15 +89,25 @@ class UserService:
             user = await self.user_repo.save_user(user)
             return UserSchema.model_validate(user)
 
-        except Exception as e:
+        except (DuplicateEmailException, DuplicateNicknameException, InvalidCheckedPasswordException) as e:
+            raise e # e 넣는 조건은 여러개 일 때 넣음, 단일 조건으로 e를 넣는건 로그 넣으려고 하는거고 단일에선 e안써도 됌
+
+        except Exception as e:  # 그러나 얘는 오류를 출력해야 하기에 e를 씀
             raise UnexpectedException(detail=f"회원가입 중 예기치 못한 오류 발생: {str(e)}")
 
     async def log_in(self, request: SignUpRequest, req: Request):
-        user = await self.user_repo.get_user_by_email(email=request.email)
+        try:
+            user = await self.user_repo.get_user_by_email(email=request.email)
 
-        if not user or not self.verify_value(request.password, user.password):
-            raise InvalidCredentialsException()
+            if not user or not self.verify_value(request.password, user.password):
+                raise InvalidCredentialsException()
 
-        access_token = self.create_jwt(user.email)
+            access_token = self.create_jwt(user.email)
 
-        return JWTResponse(access_token=access_token)
+            return JWTResponse(access_token=access_token)
+
+        except InvalidCheckedPasswordException:
+            raise
+
+        except Exception as e:
+            raise UnexpectedException(detail=f"로그인 중 예기치 못한 오류 발생: {str(e)}")
