@@ -1,6 +1,6 @@
-from pydantic import BaseModel, EmailStr, constr, field_validator, Field
+from pydantic import BaseModel, EmailStr, constr
 from datetime import date
-from typing import Literal, Optional, List
+from typing import Literal
 
 class SignUpRequest(BaseModel):
     email: EmailStr
@@ -20,3 +20,8 @@ class PassWordChangeRequest(BaseModel):
     current_password: constr(min_length=8, max_length=20)
     new_password: constr(min_length=8, max_length=20)
     confirm_password: constr(min_length=8, max_length=20)
+
+class FindIdRequest(BaseModel):
+    name: constr(min_length=2, max_length=20)
+    birth: date
+    phone_num: constr(min_length=10, max_length=11)

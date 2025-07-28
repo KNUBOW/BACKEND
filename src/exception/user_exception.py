@@ -1,4 +1,4 @@
-from util.base_exception import CustomException
+from exception.base_exception import CustomException
 
 class DuplicateEmailException(CustomException):
     def __init__(self, detail: str = "이미 사용 중인 이메일입니다"):

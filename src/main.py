@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from api import user
-from util.base_exception import CustomException
-from util.exception_handler import http_exception_handler, custom_exception_handler, validation_exception_handler, \
+from exception.base_exception import CustomException
+from exception.exception_handler import http_exception_handler, custom_exception_handler, validation_exception_handler, \
     global_exception_handler
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException

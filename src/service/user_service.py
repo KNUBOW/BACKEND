@@ -1,18 +1,19 @@
 import bcrypt
 from fastapi import Request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from jose import jwt, JWTError
 
 from core.config import settings
 from database.repository.user_repository import UserRepository
+from exception.base_exception import UnexpectedException
+from schema.request import SignUpRequest, FindIdRequest, PassWordChangeRequest
+from database.orm import User
+from schema.response import UserSchema, JWTResponse, FindIdResponse
+from util.mask_email import mask_email
+
 from exception.user_exception import DuplicateEmailException, DuplicateNicknameException, TokenExpiredException, \
     InvalidCheckedPasswordException, InvalidCredentialsException, UserNotFoundException, IncorrectPasswordException, \
     PasswordUnchangedException, PasswordMismatchException, PasswordLengthException
-from util.base_exception import UnexpectedException
-from schema.request import SignUpRequest
-from database.orm import User
-from schema.response import UserSchema, JWTResponse
-
 
 class UserService:
 
@@ -121,18 +122,38 @@ class UserService:
         except Exception as e:
             raise UnexpectedException(detail=f"로그인 중 예기치 못한 오류 발생: {str(e)}")
 
-    async def change_password(self, user: User, current_password: str, new_password: str, confirm_password: str):
-        if not self.verify_value(current_password, user.password):
+    async def change_password(self, user: User, request: PassWordChangeRequest):
+        if not self.verify_value(request.current_password, user.password):
             raise IncorrectPasswordException()
 
-        if self.verify_value(new_password, user.password):
+        if self.verify_value(request.new_password, user.password):
             raise PasswordUnchangedException()
 
-        if new_password != confirm_password:
+        if request.new_password != request.confirm_password:
             raise PasswordMismatchException()
 
-        if len(new_password) < 8 or len(new_password) > 20:
+        if len(request.new_password) < 8 or len(request.new_password) > 20:
             raise PasswordLengthException()
 
-        hashed = self.hash_value(new_password)
+        hashed = self.hash_value(request.new_password)
         await self.user_repo.update_password(user, hashed)
+
+
+    async def find_id(self, request: FindIdRequest) -> str:
+        try:
+            user = await self.user_repo.get_user_by_name(request.name)
+
+            if not user or user.birth != request.birth:
+                raise UserNotFoundException()
+
+            if not user or not self.verify_value(request.phone_num, user.phone_num):
+                raise UserNotFoundException()
+
+            masked_email = mask_email(user.email)
+            return FindIdResponse(email=masked_email)
+
+        except UserNotFoundException:
+            raise
+
+        except Exception as e:
+            raise UnexpectedException(detail=f"아이디 찾기 중 예기치 못한 오류 발생: {str(e)}")

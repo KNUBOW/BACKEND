@@ -7,7 +7,7 @@ from sqlalchemy.exc import (
 )
 
 from exception.database_exception import TransactionException, DatabaseException
-from util.base_exception import UnexpectedException
+from exception.base_exception import UnexpectedException
 
 
 async def commit_with_error_handling(session: AsyncSession, context: str = ""):

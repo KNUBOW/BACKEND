@@ -2,8 +2,8 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from util.base_exception import CustomException
-from util.base_exception import GlobalException
+from exception.base_exception import CustomException
+from exception.base_exception import GlobalException
 
 async def custom_exception_handler(request: Request, exc: CustomException):
     return JSONResponse(

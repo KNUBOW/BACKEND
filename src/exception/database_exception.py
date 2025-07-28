@@ -1,4 +1,4 @@
-from util.base_exception import CustomException
+from exception.base_exception import CustomException
 
 class TransactionException(CustomException):
     def __init__(self, detail="트랜잭션 처리 중 오류가 발생했습니다"):

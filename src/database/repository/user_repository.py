@@ -3,12 +3,12 @@ from sqlalchemy.sql import Select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from typing import Optional, Any
-
+from datetime import date
 
 from database.orm import User
 from exception.database_exception import DatabaseException
-from util.base_exception import UnexpectedException
-from util.base_repository import commit_with_error_handling
+from exception.base_exception import UnexpectedException
+from database.repository.base_repository import commit_with_error_handling
 
 
 class UserRepository:
@@ -32,6 +32,12 @@ class UserRepository:
 
     async def get_user_by_nickname(self, nickname: str) -> Optional[User]:
         return await self._get_user_by_field("nickname", nickname)
+
+    async def get_user_by_name(self, name: str) -> Optional[User]:
+        return await self._get_user_by_field("name", name)
+
+    async def get_user_by_birth(self, birth: date) -> Optional[User]:
+        return await self._get_user_by_field("birth", birth)
 
     async def save_user(self, user: User) -> User:
         self.session.add(user)

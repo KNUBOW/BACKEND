@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, Request
 
-from schema.request import SignUpRequest, LogInRequest, PassWordChangeRequest
+from schema.request import SignUpRequest, LogInRequest, PassWordChangeRequest, FindIdRequest
 from service.user_service import UserService
-from util.di import get_user_service
-from util.jwt_handler import get_access_token
+from core.di import get_user_service
+from service.auth.jwt_handler import get_access_token
 
 router = APIRouter(prefix="/users", tags=["User"])
 
@@ -30,10 +30,13 @@ async def user_change_pw(
         user_service: UserService = Depends(get_user_service),
 ):
     current_user = await user_service.get_user_by_token(access_token, req)
+    await user_service.change_password(current_user, request)
 
-    await user_service.change_password(
-        user=current_user,
-        current_password=request.current_password,
-        new_password=request.new_password,
-        confirm_password=request.confirm_password,
-    )
+
+@router.post("/find-id", status_code=200)
+async def user_find_id(
+        request: FindIdRequest,
+        user_service: UserService = Depends(get_user_service),
+):
+    email = await user_service.find_id(request)
+    return {"email": email}
