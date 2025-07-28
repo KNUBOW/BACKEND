@@ -6,7 +6,8 @@ from jose import jwt, JWTError
 from core.config import settings
 from database.repository.user_repository import UserRepository
 from exception.user_exception import DuplicateEmailException, DuplicateNicknameException, TokenExpiredException, \
-    InvalidCheckedPasswordException, InvalidCredentialsException
+    InvalidCheckedPasswordException, InvalidCredentialsException, UserNotFoundException, IncorrectPasswordException, \
+    PasswordUnchangedException, PasswordMismatchException, PasswordLengthException
 from util.base_exception import UnexpectedException
 from schema.request import SignUpRequest
 from database.orm import User
@@ -60,6 +61,13 @@ class UserService:
         except JWTError:
             raise TokenExpiredException()
 
+    async def get_user_by_token(self, access_token: str, req: Request) -> User:
+        email: str = self.decode_jwt(access_token)
+        user: User | None = await self.user_repo.get_user_by_email(email=email)
+
+        if not user:
+            raise UserNotFoundException()
+        return user
 
     async def sign_up(self, request: SignUpRequest):
 
@@ -106,8 +114,25 @@ class UserService:
 
             return JWTResponse(access_token=access_token)
 
-        except InvalidCheckedPasswordException:
+
+        except InvalidCredentialsException:
             raise
 
         except Exception as e:
             raise UnexpectedException(detail=f"로그인 중 예기치 못한 오류 발생: {str(e)}")
+
+    async def change_password(self, user: User, current_password: str, new_password: str, confirm_password: str):
+        if not self.verify_value(current_password, user.password):
+            raise IncorrectPasswordException()
+
+        if self.verify_value(new_password, user.password):
+            raise PasswordUnchangedException()
+
+        if new_password != confirm_password:
+            raise PasswordMismatchException()
+
+        if len(new_password) < 8 or len(new_password) > 20:
+            raise PasswordLengthException()
+
+        hashed = self.hash_value(new_password)
+        await self.user_repo.update_password(user, hashed)

@@ -14,4 +14,9 @@ class SignUpRequest(BaseModel):
 
 class LogInRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: constr(min_length=8, max_length=20)
+
+class PassWordChangeRequest(BaseModel):
+    current_password: constr(min_length=8, max_length=20)
+    new_password: constr(min_length=8, max_length=20)
+    confirm_password: constr(min_length=8, max_length=20)

@@ -38,3 +38,8 @@ class UserRepository:
         await commit_with_error_handling(self.session, context="유저 저장")
         await self.session.refresh(user)
         return user
+
+    async def update_password(self, user: User, hashed_password: str) -> None:
+        user.password = hashed_password
+        self.session.add(user)
+        await commit_with_error_handling(self.session, context="비밀번호 변경")
