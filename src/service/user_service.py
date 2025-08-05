@@ -6,7 +6,7 @@ from jose import jwt, JWTError
 from core.config import settings
 from database.repository.user_repository import UserRepository
 from exception.base_exception import UnexpectedException
-from schema.request import SignUpRequest, FindIdRequest, PassWordChangeRequest
+from schema.request import SignUpRequest, FindIdRequest, PassWordChangeRequest, LogInRequest
 from database.orm import User
 from schema.response import UserSchema, JWTResponse, FindIdResponse
 from util.mask_email import mask_email
@@ -104,7 +104,7 @@ class UserService:
         except Exception as e:  # 그러나 얘는 오류를 출력해야 하기에 e를 씀
             raise UnexpectedException(detail=f"회원가입 중 예기치 못한 오류 발생: {str(e)}")
 
-    async def log_in(self, request: SignUpRequest, req: Request):
+    async def log_in(self, request: LogInRequest, req: Request):
         try:
             user = await self.user_repo.get_user_by_email(email=request.email)
 

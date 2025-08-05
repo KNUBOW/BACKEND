@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: SecretStr
     GOOGLE_REDIRECT_URI: str
 
+    KAKAO_CLIENT_ID: str
+    KAKAO_CLIENT_SECRET: SecretStr
+    KAKAO_REDIRECT_URI: str
+
     OLLAMA_URL: str
     MODEL_NAME: str
 

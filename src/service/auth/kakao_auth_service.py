@@ -6,13 +6,13 @@ from service.auth.base_social_auth_service import BaseSocialAuthService
 from exception.social_auth_exception import SocialTokenException, SocialUserInfoException
 
 
-class NaverAuthService(BaseSocialAuthService):
+class KakaoAuthService(BaseSocialAuthService):
     def __init__(self, user_service, user_repo):
-        super().__init__(user_service, user_repo, platform="naver")
+        super().__init__(user_service, user_repo, platform="kakao")
 
-    CLIENT_ID = settings.NAVER_CLIENT_ID
-    CLIENT_SECRET = settings.NAVER_CLIENT_SECRET.get_secret_value()
-    REDIRECT_URI = settings.NAVER_REDIRECT_URI
+    CLIENT_ID = settings.KAKAO_CLIENT_ID
+    CLIENT_SECRET = settings.KAKAO_CLIENT_SECRET.get_secret_value()
+    REDIRECT_URI = settings.KAKAO_REDIRECT_URI
 
     async def get_auth_url(self):
         state = secrets.token_urlsafe(16)
@@ -23,16 +23,16 @@ class NaverAuthService(BaseSocialAuthService):
             "redirect_uri": self.REDIRECT_URI,
             "state": state
         })
-        return f"https://nid.naver.com/oauth2.0/authorize?{query}"
+        return f"https://kauth.kakao.com/oauth/authorize?{query}"
 
-    async def get_token(self, code: str, state: str):
+    async def get_token(self, code: str):
         async with httpx.AsyncClient() as client:
-            response = await client.post("https://nid.naver.com/oauth2.0/token", data={
+            response = await client.post("https://kauth.kakao.com/oauth/token", data={
                 "grant_type": "authorization_code",
                 "client_id": self.CLIENT_ID,
                 "client_secret": self.CLIENT_SECRET,
-                "code": code,
-                "state": state
+                "redirect_uri": self.REDIRECT_URI,
+                "code": code
             })
             if response.status_code != 200:
                 raise SocialTokenException(f"access_token 요청 실패: {response.status_code}, {response.text}")
@@ -41,22 +41,27 @@ class NaverAuthService(BaseSocialAuthService):
     async def get_user_info(self, access_token: str):
         headers = {"Authorization": f"Bearer {access_token}"}
         async with httpx.AsyncClient() as client:
-            response = await client.get("https://openapi.naver.com/v1/nid/me", headers=headers)
+            response = await client.get("https://kapi.kakao.com/v2/user/me", headers=headers)
             if response.status_code != 200:
                 raise SocialUserInfoException(f"사용자 정보 요청 실패: {response.status_code}, {response.text}")
             return response.json()
 
-    async def handle_callback(self, code: str, state: str):
+    async def handle_kakao_callback(self, code: str, state: str):
         await self.validate_state(state)
-        token_data = await self.get_token(code, state)
+        token_data = await self.get_token(code)
         user_info = await self.get_user_info(token_data.get("access_token"))
 
-        profile = user_info.get("response", {})
+        kakao_account = user_info.get("kakao_account", {})
+        profile = kakao_account.get("profile", {})
+
         return await self.handle_login_or_signup(
-            profile.get("email"),
-            profile.get("name"),
-            profile.get("id"),
-            "naver",
-            "N",
-            extra_fields={"gender": profile.get("gender"), "birth": profile.get("birthyear")}
+            kakao_account.get("email"),
+            profile.get("nickname"),
+            str(user_info.get("id")),
+            "kakao",
+            "K",
+            extra_fields={
+                "gender": kakao_account.get("gender"),
+                "birth": f"{kakao_account.get('birthyear')}-{kakao_account.get('birthday')}"
+            }
         )
