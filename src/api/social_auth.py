@@ -31,12 +31,11 @@ async def kakao_login(
 
 @router.get("/naver/callback")
 async def naver_callback(
-    request: Request,
     code: str = None,
     state: str = None,
     naver_auth_service: NaverAuthService = Depends(get_naver_auth_service),
 ):
-    redirect_url = await naver_auth_service.handle_naver_callback(code, state, request)
+    redirect_url = await naver_auth_service.handle_callback(code, state)
     return RedirectResponse(url=redirect_url)
 # ---------------- 구글 로그인 ----------------
 

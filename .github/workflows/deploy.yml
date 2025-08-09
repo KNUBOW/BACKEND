@@ -55,3 +55,4 @@ jobs:  # 시킬 일
             cd ~/capstone  # EC2의 프로젝트 폴더로 이동
             docker compose pull app # 최신 Docker 이미지 pull
             docker compose up -d --force-recreate app # 컨테이너 재시작
+            docker image prune -af   # 이미지 파일 정리

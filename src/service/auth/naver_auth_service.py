@@ -1,7 +1,7 @@
 import secrets
 import httpx
-from urllib.parse import urlencode
 from core.config import settings
+from core.connection import RedisClient
 from service.auth.base_social_auth_service import BaseSocialAuthService
 from exception.social_auth_exception import SocialTokenException, SocialUserInfoException
 
@@ -16,14 +16,16 @@ class NaverAuthService(BaseSocialAuthService):
 
     async def get_auth_url(self):
         state = secrets.token_urlsafe(16)
-        await self.save_state(state)
-        query = urlencode({
-            "response_type": "code",
-            "client_id": self.CLIENT_ID,
-            "redirect_uri": self.REDIRECT_URI,
-            "state": state
-        })
-        return f"https://nid.naver.com/oauth2.0/authorize?{query}"
+        redis = await RedisClient.get_redis()
+        await redis.setex(f"naver_state:{state}", 300, "valid")
+
+        return (
+            "https://nid.naver.com/oauth2.0/authorize"
+            "?response_type=code"
+            f"&client_id={self.CLIENT_ID}"
+            f"&redirect_uri={self.REDIRECT_URI}"
+            f"&state={state}"
+        )
 
     async def get_token(self, code: str, state: str):
         async with httpx.AsyncClient() as client:
