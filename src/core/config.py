@@ -3,10 +3,9 @@ from pydantic import SecretStr
 from typing import Literal
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent  # foodthing/
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 ENV_PATH = BASE_DIR / ".env"
 
-# 민감한 정보 보호
 
 class Settings(BaseSettings):
 
@@ -26,10 +25,13 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: SecretStr
     GOOGLE_REDIRECT_URI: str
 
+    KAKAO_CLIENT_ID: str
+    KAKAO_CLIENT_SECRET: SecretStr
+    KAKAO_REDIRECT_URI: str
+
     OLLAMA_URL: str
     MODEL_NAME: str
 
-    # 공통
     ENV: Literal["dev", "prod", "test"] = "dev"
 
     class Config:
@@ -37,4 +39,4 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 
-settings = Settings()  # 유효성 체크 여기서 자동 수행됨
+settings = Settings()  # 유효성 체크

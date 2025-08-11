@@ -11,6 +11,5 @@ class UserSchema(BaseModel):
 class JWTResponse(BaseModel):
     access_token:str
 
-
 class FindIdResponse(BaseModel):
     email: str

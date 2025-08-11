@@ -1,5 +1,7 @@
 from fastapi import FastAPI
-from api import user
+from fastapi.middleware.cors import CORSMiddleware
+
+from api import user, social_auth
 from exception.base_exception import CustomException
 from exception.exception_handler import http_exception_handler, custom_exception_handler, validation_exception_handler, \
     global_exception_handler
@@ -14,7 +16,21 @@ app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
+origins = [
+    "http://localhost:8000"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # 모든 HTTP 메서드 허용
+    allow_headers=["*"],  # 모든 헤더 허용
+)
+
+
 app.include_router(user.router)
+app.include_router(social_auth.router)
 @app.get("/")
 async def root():
     return {"Hello":"World"}

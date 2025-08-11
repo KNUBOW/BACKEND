@@ -6,7 +6,7 @@ from jose import jwt, JWTError
 from core.config import settings
 from database.repository.user_repository import UserRepository
 from exception.base_exception import UnexpectedException
-from schema.request import SignUpRequest, FindIdRequest, PassWordChangeRequest
+from schema.request import SignUpRequest, FindIdRequest, PassWordChangeRequest, LogInRequest
 from database.orm import User
 from schema.response import UserSchema, JWTResponse, FindIdResponse
 from util.mask_email import mask_email
@@ -37,10 +37,10 @@ class UserService:
             hashed_value.encode(self.encoding),
         )
 
-    def create_jwt(self, email: str) -> str:
+    def create_jwt(self, user_id: int) -> str:
         return jwt.encode(
             {
-                "sub": email,
+                "sub": user_id,
                 "exp": datetime.now() + timedelta(days=1),
             },
             self.secret_key,
@@ -52,19 +52,19 @@ class UserService:
             payload: dict = jwt.decode(
                 access_token, self.secret_key, algorithms=[self.jwt_algorithm]
             )
-            email = payload.get("sub")
+            user_id = payload.get("sub")
 
-            if email is None:
+            if user_id is None:
                 raise TokenExpiredException()
 
-            return email
+            return user_id
 
         except JWTError:
             raise TokenExpiredException()
 
     async def get_user_by_token(self, access_token: str, req: Request) -> User:
-        email: str = self.decode_jwt(access_token)
-        user: User | None = await self.user_repo.get_user_by_email(email=email)
+        user_id: int = self.decode_jwt(access_token)
+        user: User | None = await self.user_repo.get_user_by_id(user_id=user_id)
 
         if not user:
             raise UserNotFoundException()
@@ -85,33 +85,33 @@ class UserService:
             hashed_password = self.hash_value(request.password)
             hashed_phone_num = self.hash_value(request.phone_num)
 
-            user = User.create(
+            user = User(
                 email=request.email,
-                hashed_password=hashed_password,
+                password=hashed_password,
                 name=request.name,
                 nickname=request.nickname,
                 birth=request.birth,
                 gender=request.gender,
-                hashed_phone_num=hashed_phone_num
+                phone_num=hashed_phone_num
             )
 
             user = await self.user_repo.save_user(user)
             return UserSchema.model_validate(user)
 
         except (DuplicateEmailException, DuplicateNicknameException, InvalidCheckedPasswordException) as e:
-            raise e # e 넣는 조건은 여러개 일 때 넣음, 단일 조건으로 e를 넣는건 로그 넣으려고 하는거고 단일에선 e안써도 됌
+            raise e
 
-        except Exception as e:  # 그러나 얘는 오류를 출력해야 하기에 e를 씀
+        except Exception as e:
             raise UnexpectedException(detail=f"회원가입 중 예기치 못한 오류 발생: {str(e)}")
 
-    async def log_in(self, request: SignUpRequest, req: Request):
+    async def log_in(self, request: LogInRequest, req: Request):
         try:
             user = await self.user_repo.get_user_by_email(email=request.email)
 
             if not user or not self.verify_value(request.password, user.password):
                 raise InvalidCredentialsException()
 
-            access_token = self.create_jwt(user.email)
+            access_token = self.create_jwt(user.id)
 
             return JWTResponse(access_token=access_token)
 

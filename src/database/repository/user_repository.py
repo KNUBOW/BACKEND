@@ -36,16 +36,13 @@ class UserRepository:
     async def get_user_by_name(self, name: str) -> Optional[User]:
         return await self._get_user_by_field("name", name)
 
-    async def get_user_by_birth(self, birth: date) -> Optional[User]:
-        return await self._get_user_by_field("birth", birth)
-
     async def save_user(self, user: User) -> User:
         self.session.add(user)
-        await commit_with_error_handling(self.session, context="유저 저장")
+        await commit_with_error_handling(self.session)
         await self.session.refresh(user)
         return user
 
     async def update_password(self, user: User, hashed_password: str) -> None:
         user.password = hashed_password
         self.session.add(user)
-        await commit_with_error_handling(self.session, context="비밀번호 변경")
+        await commit_with_error_handling(self.session)
