@@ -8,6 +8,10 @@ class DuplicateNicknameException(CustomException):
     def __init__(self, detail: str = "이미 사용 중인 닉네임입니다"):
         super().__init__(status_code=409, detail=detail, code="NICKNAME_CONFLICT")
 
+class DuplicatePhoneNumException(CustomException):
+    def __init__(self, detail: str = "이미 사용 중인 전화번호입니다"):
+        super().__init__(status_code=409, detail=detail, code="PHONE_NUM_CONFLICT")
+
 class InvalidCheckedPasswordException(CustomException):
     def __init__(self, detail: str = "비밀번호와 비밀번호 확인이 일치하지 않습니다"):
         super().__init__(status_code=400, detail=detail, code="PASSWORD_MISMATCH")

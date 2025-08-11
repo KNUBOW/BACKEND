@@ -81,6 +81,7 @@ class NaverAuthService(BaseSocialAuthService):
 
         user = await self.user_repo.get_user_by_email(email=email_for_db)
 
+        # 로그인 -> 정보 없다면 신규 가입
         if user:
             token = self.user_service.create_jwt(user.id)
             return f"http://프론트엔드서버/auth/success?token={token}"
@@ -88,17 +89,17 @@ class NaverAuthService(BaseSocialAuthService):
         # 신규 가입
         try:
             random_password = secrets.token_urlsafe(12)
-            hashed_password = self.user_service.hash_value(random_password)
+            hashed_password = self.user_service.hash_password(random_password)
 
             new_user = User(
                 email=email_for_db,
                 password=hashed_password,
                 name=name,
                 nickname=nickname,
-                birth=birth_date,  # 반드시 date 객체
-                gender=gender,  # 'male' or 'female'
+                birth=birth_date,
+                gender=gender,
                 phone_num=None,
-                social_auth="naver",  # Enum 멤버와 일치
+                social_auth="naver",
             )
 
             saved = await self.user_repo.save_user(new_user)

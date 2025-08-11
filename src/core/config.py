@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     JWT_SECRET_KEY: SecretStr
     SESSION_MIDDLEWARE_SECRET_KEY: SecretStr
+    PHONE_PEPPER: SecretStr
 
     POSTGRES_DATABASE_URL: str
     REDIS_HOST: str

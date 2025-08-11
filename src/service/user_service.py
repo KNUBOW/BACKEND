@@ -1,6 +1,10 @@
 import bcrypt
+import hashlib
+import hmac
+from base64 import urlsafe_b64encode
+
 from fastapi import Request
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from jose import jwt, JWTError
 
 from core.config import settings
@@ -13,7 +17,8 @@ from util.mask_email import mask_email
 
 from exception.user_exception import DuplicateEmailException, DuplicateNicknameException, TokenExpiredException, \
     InvalidCheckedPasswordException, InvalidCredentialsException, UserNotFoundException, IncorrectPasswordException, \
-    PasswordUnchangedException, PasswordMismatchException, PasswordLengthException
+    PasswordUnchangedException, PasswordMismatchException, PasswordLengthException, DuplicatePhoneNumException
+
 
 class UserService:
 
@@ -24,18 +29,27 @@ class UserService:
     def __init__(self, user_repo: UserRepository):
         self.user_repo = user_repo
 
-    def hash_value(self, plain_value: str) -> str:
-        hashed: bytes = bcrypt.hashpw(
-            plain_value.encode(self.encoding),
+    def hash_password(self, plain_password: str) -> str:
+        hashed_password: bytes = bcrypt.hashpw(
+            plain_password.encode(self.encoding),
             salt=bcrypt.gensalt(),
         )
-        return hashed.decode(self.encoding)
+        return hashed_password.decode(self.encoding)
 
-    def verify_value(self, plain_value: str, hashed_value: str) -> bool:
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return bcrypt.checkpw(
-            plain_value.encode(self.encoding),
-            hashed_value.encode(self.encoding),
+            plain_password.encode(self.encoding),
+            hashed_password.encode(self.encoding)
         )
+
+    def _make_phone_digest(self, phone: str) -> str:
+        mac = hmac.new(
+            settings.PHONE_PEPPER.get_secret_value().encode("utf-8"),
+            phone.encode(self.encoding),
+            hashlib.sha256,
+        ).digest()
+        return urlsafe_b64encode(mac).decode(self.encoding)
+
 
     def create_jwt(self, user_id: int) -> str:
         return jwt.encode(
@@ -82,8 +96,11 @@ class UserService:
             if request.password != request.checked_password:
                 raise InvalidCheckedPasswordException()
 
-            hashed_password = self.hash_value(request.password)
-            hashed_phone_num = self.hash_value(request.phone_num)
+            hashed_password = self.hash_password(request.password)
+            phone_digest = self._make_phone_digest(request.phone_num)
+
+            if await self.user_repo.get_user_by_phone_num(phone_digest):
+                raise DuplicatePhoneNumException()
 
             user = User(
                 email=request.email,
@@ -92,13 +109,13 @@ class UserService:
                 nickname=request.nickname,
                 birth=request.birth,
                 gender=request.gender,
-                phone_num=hashed_phone_num
+                phone_num=phone_digest
             )
 
             user = await self.user_repo.save_user(user)
             return UserSchema.model_validate(user)
 
-        except (DuplicateEmailException, DuplicateNicknameException, InvalidCheckedPasswordException) as e:
+        except (DuplicateEmailException, DuplicateNicknameException, InvalidCheckedPasswordException, DuplicatePhoneNumException) as e:
             raise e
 
         except Exception as e:
@@ -108,7 +125,7 @@ class UserService:
         try:
             user = await self.user_repo.get_user_by_email(email=request.email)
 
-            if not user or not self.verify_value(request.password, user.password):
+            if not user or not self.verify_password(request.password, user.password):
                 raise InvalidCredentialsException()
 
             access_token = self.create_jwt(user.id)
@@ -123,10 +140,10 @@ class UserService:
             raise UnexpectedException(detail=f"로그인 중 예기치 못한 오류 발생: {str(e)}")
 
     async def change_password(self, user: User, request: PassWordChangeRequest):
-        if not self.verify_value(request.current_password, user.password):
+        if not self.verify_password(request.current_password, user.password):
             raise IncorrectPasswordException()
 
-        if self.verify_value(request.new_password, user.password):
+        if self.verify_password(request.new_password, user.password):
             raise PasswordUnchangedException()
 
         if request.new_password != request.confirm_password:
@@ -135,25 +152,26 @@ class UserService:
         if len(request.new_password) < 8 or len(request.new_password) > 20:
             raise PasswordLengthException()
 
-        hashed = self.hash_value(request.new_password)
+        hashed = self.hash_password(request.new_password)
         await self.user_repo.update_password(user, hashed)
-
 
     async def find_id(self, request: FindIdRequest) -> str:
         try:
-            user = await self.user_repo.get_user_by_name(request.name)
-
-            if not user or user.birth != request.birth:
+            candidates = await self.user_repo.find_candidates_for_find_id(
+                name=request.name,
+                birth=request.birth,
+            )
+            if not candidates:
                 raise UserNotFoundException()
 
-            if not user or not self.verify_value(request.phone_num, user.phone_num):
-                raise UserNotFoundException()
+            want = self._make_phone_digest(request.phone_num)
+            for u in candidates:
+                if u.phone_num and u.phone_num == want:
+                    return FindIdResponse(email=mask_email(u.email))
 
-            masked_email = mask_email(user.email)
-            return FindIdResponse(email=masked_email)
+            raise UserNotFoundException()
 
         except UserNotFoundException:
             raise
-
         except Exception as e:
             raise UnexpectedException(detail=f"아이디 찾기 중 예기치 못한 오류 발생: {str(e)}")
