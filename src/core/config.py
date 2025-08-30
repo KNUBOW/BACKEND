@@ -30,11 +30,6 @@ class Settings(BaseSettings):
     KAKAO_CLIENT_SECRET: SecretStr
     KAKAO_REDIRECT_URI: str
 
-    AWS_ACCESS_KEY_ID: str
-    AWS_SECRET_ACCESS_KEY: SecretStr
-    AWS_BUCKET_NAME: str
-
-
     OLLAMA_URL: str
     MODEL_NAME: str
 

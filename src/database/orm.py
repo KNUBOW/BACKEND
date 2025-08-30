@@ -17,12 +17,12 @@ class User(Base):
     social_auth = Column(Enum("google", "naver", "none", name="social_auth_type"), default="none", nullable=False)
     status = Column(Boolean, nullable=False, server_default=text("TRUE"))
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
-
-    #ingredients = relationship("Ingredient", back_populates="user", cascade="all, delete-orphan")
+"""
+    ingredients = relationship("Ingredient", back_populates="user", cascade="all, delete-orphan")
     board = relationship("Board", back_populates="user", cascade="all, delete-orphan")
     board_like = relationship("BoardLike", back_populates="user", cascade="all, delete-orphan")
     board_comment = relationship("BoardComment", back_populates="user", cascade="all, delete-orphan")
-"""
+
 class Ingredient(Base):
     __tablename__ = "ingredients"
 
@@ -43,7 +43,6 @@ class IngredientCategory(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     category_name = Column(String(40), nullable=False, unique=True)
-"""
 
 class Board(Base):
     __tablename__ = "board"
@@ -52,9 +51,10 @@ class Board(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(40), nullable=False)
     content = Column(Text, nullable=False)
-    status = Column(Boolean, nullable=False, server_default=text("TRUE"))
-    like_count = Column(Integer, nullable=False, server_default=text("0"))
+    is_active = Column(Boolean, nullable=False, server_default=text("TRUE"))
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
+
+    like_count = Column(Integer, nullable=False, server_default=text("0"))
 
     user = relationship("User", back_populates="board")
     board_like = relationship("BoardLike", back_populates="board")
@@ -68,6 +68,10 @@ class BoardLike(Base):
     board_id = Column(Integer, ForeignKey("board.id", ondelete="CASCADE"), primary_key=True, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
 
+    __table_args__ = (
+        Index("ix_board_like_board_id", "board_id"),
+    )
+
     user = relationship("User", back_populates="board_like", passive_deletes=True)
     board = relationship("Board", back_populates="board_like", passive_deletes=True)
 
@@ -78,7 +82,7 @@ class BoardComment(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     board_id = Column(Integer, ForeignKey("board.id", ondelete="CASCADE"), nullable=False)
     comment = Column(Text, nullable=False)
-    status = Column(Boolean, nullable=False, server_default=text("TRUE"))
+    is_active = Column(Boolean, nullable=False, server_default=text("TRUE"))
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
 
     user = relationship("User", back_populates="board_comment")
@@ -92,3 +96,5 @@ class BoardImage(Base):
     image_url = Column(Text, nullable=False)
 
     board = relationship("Board", back_populates="board_image", passive_deletes=True)
+
+"""
