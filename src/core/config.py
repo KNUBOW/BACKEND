@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     OLLAMA_URL: str
     MODEL_NAME: str
 
+    AWS_ACCESS_KEY_ID: str
+    AWS_SECRET_ACCESS_KEY: SecretStr
+    AWS_BUCKET_NAME: str
+
     ENV: Literal["dev", "prod", "test"] = "dev"
 
     class Config:

@@ -83,7 +83,7 @@ class NaverAuthService(BaseSocialAuthService):
 
         # 로그인 -> 정보 없다면 신규 가입
         if user:
-            token = self.user_service.create_jwt(user.id)
+            token = self.user_service.create_jwt(user.email)
             return f"http://프론트엔드서버/auth/success?token={token}"
 
         # 신규 가입

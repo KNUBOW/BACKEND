@@ -27,4 +27,6 @@ class FindIdRequest(BaseModel):
     phone_num: constr(min_length=10, max_length=11)
 
 class IngredientRequest(BaseModel):
-    name: constr(min_length=1, max_length=40)
+    ingredient_name: constr(min_length=1, max_length=40)
+    category_id: int
+    purchase_date: date

@@ -51,10 +51,10 @@ class UserService:
         return urlsafe_b64encode(mac).decode(self.encoding)
 
 
-    def create_jwt(self, user_id: int) -> str:
+    def create_jwt(self, email: str) -> str:
         return jwt.encode(
             {
-                "sub": user_id,
+                "sub": email,
                 "exp": datetime.now() + timedelta(days=1),
             },
             self.secret_key,
@@ -66,19 +66,19 @@ class UserService:
             payload: dict = jwt.decode(
                 access_token, self.secret_key, algorithms=[self.jwt_algorithm]
             )
-            user_id = payload.get("sub")
+            email = payload.get("sub")
 
-            if user_id is None:
+            if email is None:
                 raise TokenExpiredException()
 
-            return user_id
+            return email
 
         except JWTError:
             raise TokenExpiredException()
 
     async def get_user_by_token(self, access_token: str, req: Request) -> User:
-        user_id: int = self.decode_jwt(access_token)
-        user: User | None = await self.user_repo.get_user_by_id(user_id=user_id)
+        email: str = self.decode_jwt(access_token=access_token)
+        user: User | None = await self.user_repo.get_user_by_email(email=email)
 
         if not user:
             raise UserNotFoundException()
@@ -128,7 +128,7 @@ class UserService:
             if not user or not self.verify_password(request.password, user.password):
                 raise InvalidCredentialsException()
 
-            access_token = self.create_jwt(user.id)
+            access_token = self.create_jwt(user.email)
 
             return JWTResponse(access_token=access_token)
 
