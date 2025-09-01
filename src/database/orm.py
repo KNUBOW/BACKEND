@@ -19,6 +19,11 @@ class User(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
 
     ingredients = relationship("Ingredient", back_populates="user", cascade="all, delete-orphan")
+    expiration_alerts = relationship("ExpirationAlert", back_populates="user", cascade="all, delete-orphan")
+    boards = relationship("Board", back_populates="user", cascade="all, delete-orphan")
+    board_comments = relationship("BoardComment", back_populates="user", cascade="all, delete-orphan")
+    board_likes = relationship("BoardLike", back_populates="user", cascade="all, delete-orphan")
+
 
 class Ingredient(Base):
     __tablename__ = "ingredients"
@@ -32,6 +37,7 @@ class Ingredient(Base):
 
     user = relationship("User", back_populates="ingredients")
     ingredient_category = relationship("IngredientCategory", back_populates="ingredients")
+    expiration_alerts = relationship("ExpirationAlert", back_populates="ingredient", cascade="all, delete-orphan")
 
 class IngredientCategory(Base):
     __tablename__ = "ingredient_category"
@@ -51,3 +57,56 @@ class ExpirationAlert(Base):
     days_left = Column(Integer, nullable=False)
     is_read = Column(Boolean, nullable=False, server_default=text("FALSE"))
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
+
+    user = relationship("User", back_populates="expiration_alerts")
+    ingredient = relationship("Ingredient", back_populates="expiration_alerts")
+
+class Board(Base):
+    __tablename__ = "board"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String(40), nullable=False)
+    content = Column(Text, nullable=False)
+    like_count = Column(Integer, nullable=False, server_default=text("0"))
+    status = Column(Boolean, nullable=False, server_default=text("TRUE"))
+    exist_image = Column(Boolean, nullable=False, server_default=text("FALSE"))
+    created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
+
+    user = relationship("User", back_populates="boards")
+    comments = relationship("BoardComment", back_populates="board", cascade="all, delete-orphan")
+    likes = relationship("BoardLike", back_populates="board", cascade="all, delete-orphan")
+    images = relationship("BoardImage", back_populates="board", cascade="all, delete-orphan")
+
+class BoardComment(Base):
+    __tablename__ = "board_comment"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    board_id = Column(Integer, ForeignKey("board.id", ondelete="CASCADE"), nullable=False)
+    comment = Column(Text, nullable=False)
+    status = Column(Boolean, nullable=False, server_default=text("TRUE"))
+    created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
+
+    user = relationship("User", back_populates="board_comments")
+    board = relationship("Board", back_populates="comments")
+
+class BoardLike(Base):
+    __tablename__ = "board_like"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, nullable=False)
+    board_id = Column(Integer, ForeignKey("board.id", ondelete="CASCADE"), primary_key=True, nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
+
+    user = relationship("User", back_populates="board_likes")
+    board = relationship("Board", back_populates="likes")
+
+class BoardImage(Base):
+    __tablename__ = "board_image"
+
+    id = Column(Integer, primary_key=True, index=True)
+    board_id = Column(Integer, ForeignKey("board.id", ondelete="CASCADE"), nullable=False)
+    image_url = Column(String(255), nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
+
+    board = relationship("Board", back_populates="images")

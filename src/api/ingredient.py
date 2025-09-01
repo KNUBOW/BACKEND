@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from core.di import get_ingredient_service
 from schema.request import IngredientRequest
-from schema.response import IngredientSchema, IngredientListSchema
+from schema.response import IngredientSchema, IngredientNameListResponse, IngredientListSchema
 from service.ingredient_service import IngredientService
 
 router = APIRouter(prefix="/ingredients", tags=["ingredients"])
@@ -14,12 +14,17 @@ async def create_ingredient(
 ):
     return await service.create_ingredient(request)
 
-@router.get("", status_code=200, response_model=IngredientListSchema)
+@router.get("", status_code=200, response_model=IngredientNameListResponse)
 async def get_ingredients(
     service: IngredientService = Depends(get_ingredient_service)
 ):
     return await service.get_ingredients()
 
+@router.get("/detail", status_code=200, response_model=IngredientListSchema)
+async def get_detail_ingredients(
+    service: IngredientService = Depends(get_ingredient_service)
+):
+    return await service.get_detail_ingredients()
 @router.delete("", status_code=204)
 async def delete_ingredient(
     ingredient_id: int,

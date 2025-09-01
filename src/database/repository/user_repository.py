@@ -36,19 +36,6 @@ class UserRepository:
     async def get_user_by_phone_num(self, phone_num: str) -> Optional[User]:
         return await self._get_user_by_field("phone_num", phone_num)
 
-    async def get_user_by_name(self, name: str) -> Optional[User]:
-        return await self._get_user_by_field("name", name)
-
-    async def get_users_by_name(self, name: str) -> List[User]:
-        try:
-            stmt: Select = select(User).where(User.name == name)
-            result = await self.session.execute(stmt)
-            return list(result.scalars().all())
-        except SQLAlchemyError as e:
-            raise DatabaseException(detail=f"DB 조회 오류: {str(e)}")
-        except Exception as e:
-            raise UnexpectedException(detail=f"예기치 못한 에러: {str(e)}")
-
     async def find_candidates_for_find_id(self, name: str, birth) -> List[User]:
         try:
             stmt: Select = select(User).where(User.name == name, User.birth == birth)

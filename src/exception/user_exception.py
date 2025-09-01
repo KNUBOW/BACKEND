@@ -47,3 +47,7 @@ class PasswordMismatchException(CustomException):
 class PasswordLengthException(CustomException):
     def __init__(self):
         super().__init__(status_code=400, detail="비밀번호는 최소 8자에서 20자 사이여야 합니다.")
+
+class HaveNotPermissionException(CustomException):
+    def __init__(self, detail: str = "권한이 없습니다."):
+        super().__init__(status_code=404, detail=detail, code="HAVE_NOT_PERMISSION")

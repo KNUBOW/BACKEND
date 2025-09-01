@@ -27,3 +27,6 @@ class IngredientSchema(BaseModel):
 
 class IngredientListSchema(BaseModel):
     ingredients: List[IngredientSchema]
+
+class IngredientNameListResponse(BaseModel):
+    ingredient_list: List[str]
