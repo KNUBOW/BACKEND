@@ -14,6 +14,7 @@ from service.auth.kakao_auth_service import KakaoAuthService
 from service.auth.naver_auth_service import NaverAuthService
 from service.board_service import BoardService
 from service.ingredient_service import IngredientService
+from service.recipe_service import FoodThingAIService
 from service.user_service import UserService
 
 
@@ -60,6 +61,20 @@ def get_board_service(
         access_token=access_token,
         req=req
     )
+
+def get_foodthing_service(
+    request: Request,
+    user_service: UserService = Depends(get_user_service),
+    user_repo: UserRepository = Depends(get_user_repo),
+    access_token: str = Depends(get_access_token),
+) -> FoodThingAIService:
+    return FoodThingAIService(
+        user_service=user_service,
+        user_repo=user_repo,
+        access_token=access_token,
+        req=request
+    )
+
 
 # ------------------- AuthService 공통 팩토리 -------------------
 T = TypeVar("T")

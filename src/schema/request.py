@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, constr
 from datetime import date
-from typing import Literal
+from typing import Literal, List
 
 class SignUpRequest(BaseModel):
     email: EmailStr
@@ -30,3 +30,13 @@ class IngredientRequest(BaseModel):
     ingredient_name: constr(min_length=1, max_length=40)
     category_id: int
     purchase_date: date
+
+class FoodCookRequest(BaseModel):
+    food: str
+    use_ingredients: List[str] = []
+
+class IngredientCookRequest(BaseModel):
+    chat: str
+
+class FoodOnlyRequest(BaseModel):
+    chat: str

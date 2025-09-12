@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import user, social_auth, ingredient, board
+from api import user, social_auth, ingredient, board, recipe
 from exception.base_exception import CustomException
 from exception.exception_handler import http_exception_handler, custom_exception_handler, validation_exception_handler, \
     global_exception_handler
@@ -35,6 +35,7 @@ app.include_router(user.router)
 app.include_router(social_auth.router)
 app.include_router(ingredient.router)
 app.include_router(board.router)
+app.include_router(recipe.router)
 
 @app.get("/")
 async def root():

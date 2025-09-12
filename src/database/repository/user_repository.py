@@ -5,10 +5,11 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from typing import Optional, Any, List
 from datetime import date
 
-from database.orm import User
+from database.orm import User, Ingredient
 from exception.database_exception import DatabaseException
 from exception.base_exception import UnexpectedException
 from database.repository.base_repository import commit_with_error_handling
+from exception.foodthing_exception import AIServiceException
 
 
 class UserRepository:
@@ -35,6 +36,15 @@ class UserRepository:
 
     async def get_user_by_phone_num(self, phone_num: str) -> Optional[User]:
         return await self._get_user_by_field("phone_num", phone_num)
+
+    async def get_user_ingredients(self, user_id: int):
+        try:
+            ingredients = await self.session.execute(
+                select(Ingredient.ingredient_name).filter(Ingredient.user_id == user_id)
+            )
+            return [name for (name,) in ingredients.all()]
+        except Exception as e:
+            raise AIServiceException(detail=f"DB에서 재료 조회 실패: {str(e)}")
 
     async def find_candidates_for_find_id(self, name: str, birth) -> List[User]:
         try:

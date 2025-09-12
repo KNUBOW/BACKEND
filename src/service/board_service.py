@@ -127,6 +127,7 @@ class BoardService:
         result_comments = []
         for comment, nickname in comments:
             result_comments.append({
+                "id": comment.id,
                 "user_nickname": nickname,
                 "comment": comment.comment,
                 "created_at": comment.created_at
