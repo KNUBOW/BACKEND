@@ -30,8 +30,8 @@ class Settings(BaseSettings):
     KAKAO_CLIENT_SECRET: SecretStr
     KAKAO_REDIRECT_URI: str
 
-    VLLM_BASE_URL: str
-    VLLM_MODEL_NAME: str
+    OLLAMA_URL: str
+    OLLAMA_MODEL_NAME: str
     OPENAI_API_KEY: SecretStr
 
     AWS_ACCESS_KEY_ID: str
