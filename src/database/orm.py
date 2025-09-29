@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Enum, text, TIMESTAMP, Text, Boolean, Index
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, Enum, text, TIMESTAMP, Text, Boolean
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
