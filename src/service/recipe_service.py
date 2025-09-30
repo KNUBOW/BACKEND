@@ -11,7 +11,7 @@ from exception.foodthing_exception import AIServiceException, AINullResponseExce
 from exception.user_exception import TokenExpiredException, UserNotFoundException
 
 
-class FoodThingAIService:
+class FoodThingAIService:   # 레시피 추출 관련 서비스
     def __init__(self, user_service, user_repo, access_token: str, req: Request):
         self.ollama_base_url = settings.OLLAMA_URL
         self.model_name = settings.OLLAMA_MODEL_NAME
@@ -189,3 +189,40 @@ class FoodThingAIService:
     async def get_search_recipe(self, chat: str) -> Dict[str, Any]:
         prompt = PromptBuilder.build_search_prompt(chat)
         return await self._call_ollama(prompt)
+
+class RecipeManagementService:  # 레시피 CRUD 서비스
+
+    def __init__(self, recipe_repo, user_service, access_token: str, req: Request):
+        self.recipe_repo = recipe_repo
+        self.user_service = user_service
+        self.access_token = access_token
+        self.req = req
+
+    async def get_current_user(self):
+        try:
+            user = await self.user_service.get_user_by_token(self.access_token, self.req)
+        except TokenExpiredException:
+            raise
+        except Exception as e:
+            raise TokenExpiredException(detail=f"토큰 처리 중 오류: {str(e)}")
+
+        if not user:
+            raise UserNotFoundException()
+
+        return user
+
+    async def save_recipe(self, recipe_data: dict):
+        user = await self.get_current_user()
+        return await self.recipe_repo.save_recipe_data(user.id, recipe_data)
+
+    async def get_saved_recipes(self):
+        user = await self.get_current_user()
+        return await self.recipe_repo.get_recipes_by_user(user.id)
+
+    async def delete_recipe(self, recipe_id: int):
+        user = await self.get_current_user()
+
+        deleted = await self.recipe_repo.soft_delete_recipe(user.id, recipe_id)
+        if not deleted:
+            from exception.recipe_exception import RecipeNotFoundException
+            raise RecipeNotFoundException()

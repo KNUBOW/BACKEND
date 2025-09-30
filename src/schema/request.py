@@ -40,3 +40,31 @@ class IngredientCookRequest(BaseModel):
 
 class FoodOnlyRequest(BaseModel):
     chat: str
+
+
+class IngredientDetail(BaseModel):
+    name: str
+    amount: str
+
+
+class RecipeRequest(BaseModel):
+    food: str
+    use_ingredients: List[IngredientDetail]
+    steps: List[str]
+    tip: str | None = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "food": "김치 볶음밥",
+                "use_ingredients": [
+                    {"name": "김치", "amount": "200g"},
+                    {"name": "밥", "amount": "2공기"}
+                ],
+                "steps": [
+                    "김치를 적당히 잘게 썰어줍니다.",
+                    "대파를 얇게 썰어 준비합니다."
+                ],
+                "tip": "김치를 충분히 익혀야 깊은 맛을 낼 수 있습니다."
+            }
+        }

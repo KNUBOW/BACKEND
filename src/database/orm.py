@@ -23,6 +23,7 @@ class User(Base):
     boards = relationship("Board", back_populates="user", cascade="all, delete-orphan")
     board_comments = relationship("BoardComment", back_populates="user", cascade="all, delete-orphan")
     board_likes = relationship("BoardLike", back_populates="user", cascade="all, delete-orphan")
+    like_recipe = relationship("LikeRecipe", back_populates="user", cascade="all, delete-orphan")
 
 
 class Ingredient(Base):
@@ -110,3 +111,14 @@ class BoardImage(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
 
     board = relationship("Board", back_populates="images")
+
+class LikeRecipe(Base):
+    __tablename__ = "like_recipe"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    recipe = Column(Text, nullable=False)
+    status = Column(Boolean, nullable=False, server_default=text("TRUE"))
+    created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
+
+    user = relationship("User", back_populates="like_recipe")

@@ -2,6 +2,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import TypeVar, Type, Callable
 
+from database.repository.recipe_repository import RecipeRepository
 from src.core.connection import get_postgres_db
 from src.database.repository.board_repository import BoardRepository
 from src.database.repository.ingredient_repository import IngredientRepository
@@ -13,11 +14,11 @@ from src.service.auth.kakao_auth_service import KakaoAuthService
 from src.service.auth.naver_auth_service import NaverAuthService
 from src.service.board_service import BoardService
 from src.service.ingredient_service import IngredientService
-from src.service.recipe_service import FoodThingAIService
+from src.service.recipe_service import FoodThingAIService, RecipeManagementService
 from src.service.user_service import UserService
 
 
-# ------------------- 리포지토리 관련 DI (수정 없음) -------------------
+# ------------------- 리포지토리 관련 DI -------------------
 def get_user_repo(session: AsyncSession = Depends(get_postgres_db)) -> UserRepository:
     return UserRepository(session)
 
@@ -27,7 +28,10 @@ def get_ingredient_repo(session: AsyncSession = Depends(get_postgres_db)) -> Ing
 def get_board_repo(session: AsyncSession = Depends(get_postgres_db)) -> BoardRepository:
     return BoardRepository(session)
 
-# ------------------- 서비스 관련 DI (수정 없음) -------------------
+def get_recipe_repository(session: AsyncSession = Depends(get_postgres_db)) -> RecipeRepository:
+    return RecipeRepository(session)
+
+# ------------------- 서비스 관련 DI -------------------
 def get_user_service(user_repo: UserRepository = Depends(get_user_repo)) -> UserService:
     return UserService(user_repo)
 
@@ -74,14 +78,26 @@ def get_foodthing_service(
         req=request
     )
 
+def get_recipe_management_service(
+    request: Request,
+    recipe_repo: RecipeRepository = Depends(get_recipe_repository),
+    user_service: UserService = Depends(get_user_service),
+    access_token: str = Depends(get_access_token),
+) -> RecipeManagementService:
+    return RecipeManagementService(
+        recipe_repo=recipe_repo,
+        user_service=user_service,
+        access_token=access_token,
+        req=request
+    )
 
-# ------------------- AuthService 팩토리 패턴 (✅ 수정된 부분) -------------------
+
+# ------------------- AuthService 팩토리 패턴 -------------------
 T = TypeVar("T")
 
 def create_auth_service_dependency(
     service_class: Type[T],
 ) -> Callable[[UserService, UserRepository], T]:
-    """AuthService 의존성 주입 함수를 생성하는 팩토리 함수"""
     def dependency(
         user_service: UserService = Depends(get_user_service),
         user_repo: UserRepository = Depends(get_user_repo),
