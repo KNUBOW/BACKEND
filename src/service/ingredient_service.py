@@ -44,6 +44,17 @@ class IngredientService:
 
         return IngredientNameListResponse(ingredient_list=ingredient_names)
 
+    async def get_ingredient_by_id(self, ingredient_id: int) -> IngredientSchema:
+        current_user = await self.get_current_user()
+        ingredient = await self.ingredient_repo.get_ingredient_by_id(
+            user_id=current_user.id, ingredient_id=ingredient_id
+        )
+
+        if not ingredient:
+            raise IngredientNotFoundException()
+
+        return IngredientSchema.model_validate(ingredient)
+
     async def delete_ingredient(self, ingredient_id: int):
         user = await self.get_current_user()
         success = await self.ingredient_repo.delete_ingredient(user.id, ingredient_id)

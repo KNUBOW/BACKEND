@@ -24,6 +24,13 @@ class IngredientRepository:
     async def get_ingredients_by_user(self, user):
         return await self.get_ingredients(user.id)
 
+    async def get_ingredient_by_id(self, user_id: int, ingredient_id: int) -> Ingredient | None:
+        stmt = select(Ingredient).where(
+            and_(Ingredient.user_id == user_id, Ingredient.id == ingredient_id)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def delete_ingredient(self, user_id: int, ingredient_id: str) -> bool:
         stmt = delete(Ingredient).where(
             and_(Ingredient.user_id == user_id, Ingredient.id == ingredient_id)

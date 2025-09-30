@@ -174,9 +174,9 @@ class FoodThingAIService:
 
     async def get_food_recipe(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         food = request_data.get("food")
-        use_ingredients = request_data.get("use_ingredients", [])
+        use_ingredients = request_data.get("use_ingredients")
 
-        if not food or not isinstance(use_ingredients, list):
+        if not food or use_ingredients is None or not isinstance(use_ingredients, list):
             raise InvalidAIRequestException(detail="올바른 'food' 및 'use_ingredients' 값을 제공해야 합니다.")
 
         prompt = PromptBuilder.build_recipe_prompt(food, use_ingredients)

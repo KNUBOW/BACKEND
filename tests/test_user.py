@@ -2,7 +2,6 @@ import pytest
 from httpx import AsyncClient
 from datetime import date
 
-# pytest-asyncio를 사용하므로 모든 테스트 함수에 마킹
 pytestmark = pytest.mark.asyncio
 
 

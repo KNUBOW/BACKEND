@@ -8,9 +8,10 @@ from sqlalchemy.orm import sessionmaker
 from src.main import app
 from src.core.connection import get_postgres_db
 
+#테스트용 DB 설정
 TEST_SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
-
+#테스트용 세션 생성
 @pytest_asyncio.fixture(scope="function")
 async def test_session() -> AsyncGenerator[AsyncSession, None]:
     engine = create_async_engine(TEST_SQLALCHEMY_DATABASE_URL)
