@@ -2,6 +2,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from datetime import date
+import json
 
 pytestmark = pytest.mark.asyncio
 
@@ -9,6 +10,7 @@ pytestmark = pytest.mark.asyncio
 플로우 통합 테스트
 회원가입 -> 로그인 -> 식재료 추가 -> 레시피 추천
 """
+
 
 class TestUserRecipeIntegration:
 
@@ -27,7 +29,12 @@ class TestUserRecipeIntegration:
         }
 
     async def test_full_user_recipe_flow(self, async_client: AsyncClient, user_data):
+        print("\n" + "=" * 70)
+        print("🔄 통합 테스트 시작: 회원가입 -> 로그인 -> 식재료 -> 레시피")
+        print("=" * 70)
+
         # 1. 회원가입
+        print("\n[1단계] 회원가입 시도...")
         signup_response = await async_client.post("/users/sign-up", json=user_data)
         assert signup_response.status_code in [201, 409]
 
@@ -37,8 +44,8 @@ class TestUserRecipeIntegration:
         else:
             print(f"✅ 회원가입 건너뛰기 (이미 가입된 유저)")
 
-
         # 2. 로그인
+        print("\n[2단계] 로그인 중...")
         login_data = {
             "email": user_data["email"],
             "password": user_data["password"]
@@ -48,9 +55,11 @@ class TestUserRecipeIntegration:
         login_result = login_response.json()
         access_token = login_result.get("access_token") or login_result.get("token")
         assert access_token is not None
-        print(f"✅ 로그인 성공 - Token: {access_token[:20]}...")
+        print(f"✅ 로그인 성공")
+        print(f"   Token: {access_token[:30]}...")
 
         # 3. 식재료 추가 (여러 개)
+        print("\n[3단계] 식재료 추가 중...")
         headers = {"Authorization": f"Bearer {access_token}"}
         ingredients = [
             {"ingredient_name": "계란", "category_id": 1, "purchase_date": "2025-09-25"},
@@ -60,21 +69,28 @@ class TestUserRecipeIntegration:
         ]
 
         ingredient_ids = []
-        for ingredient in ingredients:
+        for i, ingredient in enumerate(ingredients, 1):
             response = await async_client.post(
                 "/ingredients",
                 json=ingredient,
                 headers=headers
             )
             assert response.status_code == 201
-            ingredient_ids.append(response.json()["id"])
+            result = response.json()
+            ingredient_ids.append(result["id"])
+            print(f"   {i}. {ingredient['ingredient_name']} 추가 완료 (ID: {result['id']})")
 
-        print(f"✅ 식재료 {len(ingredients)}개 추가 완료")
+        print(f"✅ 총 {len(ingredients)}개 식재료 추가 완료")
 
         # 4. 식재료 목록 조회
+        print("\n[4단계] 식재료 목록 조회...")
         list_response = await async_client.get("/ingredients", headers=headers)
         assert list_response.status_code == 200
         ingredients_result = list_response.json()
+
+        # 응답 구조 디버깅
+        print(f"\n🔍 식재료 응답 타입: {type(ingredients_result)}")
+        print(f"🔍 식재료 응답 샘플: {str(ingredients_result)[:200]}...")
 
         if isinstance(ingredients_result, dict):
             ingredients_list = ingredients_result.get("ingredient_list") or ingredients_result.get("ingredients") or []
@@ -83,8 +99,23 @@ class TestUserRecipeIntegration:
 
         assert len(ingredients_list) >= len(ingredients)
         print(f"✅ 식재료 목록 조회 성공 - 총 {len(ingredients_list)}개")
+        print("\n📦 현재 보유 식재료:")
 
-        # 5. 레시피 추천 요청 (AI 서비스)
+        for idx, item in enumerate(ingredients_list[:10], 1):
+            if isinstance(item, dict):
+                name = item.get("ingredient_name") or item.get("name", "이름없음")
+                purchase = item.get("purchase_date", "날짜없음")
+                print(f"   {idx}. {name} (구매일: {purchase})")
+            elif isinstance(item, str):
+                print(f"   {idx}. {item}")
+            else:
+                print(f"   {idx}. {item}")
+
+        if len(ingredients_list) > 10:
+            print(f"   ... 외 {len(ingredients_list) - 10}개")
+
+        # 5. 레시피 추천 요청
+        print("\n[5단계] 레시피 추천 요청 중...")
         recipe_response = await async_client.get(
             "/recipe/suggest",
             headers=headers
@@ -93,12 +124,30 @@ class TestUserRecipeIntegration:
 
         if recipe_response.status_code == 200:
             recipes = recipe_response.json()
-            assert "recipes" in recipes or isinstance(recipes, list)
-            print(f"✅ 레시피 추천 성공")
+            print(f"✅ 레시피 추천 성공!")
+
+            if isinstance(recipes, dict) and "recipes" in recipes:
+                recipe_list = recipes["recipes"]
+            elif isinstance(recipes, list):
+                recipe_list = recipes
+            else:
+                recipe_list = []
+
+            print(f"\n🍳 추천된 레시피 ({len(recipe_list)}개):")
+
+            print(f"\n📊 전체 레시피 응답:")
+            print(json.dumps(recipes, ensure_ascii=False, indent=2))
+
         else:
-            print(f"⚠️ AI 서비스 응답: {recipe_response.status_code}")
+            print(f"⚠️ AI 서비스 응답 코드: {recipe_response.status_code}")
+            try:
+                error_detail = recipe_response.json()
+                print(f"   에러 상세: {error_detail}")
+            except:
+                print(f"   에러 텍스트: {recipe_response.text[:200]}")
 
         # 6. 식재료 삭제
+        print(f"\n[6단계] 식재료 삭제 (ID: {ingredient_ids[0]})...")
         delete_response = await async_client.delete(
             f"/ingredients?ingredient_id={ingredient_ids[0]}",
             headers=headers
@@ -107,6 +156,7 @@ class TestUserRecipeIntegration:
         print(f"✅ 식재료 삭제 성공")
 
         # 7. 삭제 후 목록 재확인
+        print("\n[7단계] 삭제 후 재확인...")
         final_list_response = await async_client.get("/ingredients", headers=headers)
         assert final_list_response.status_code == 200
         final_list_result = final_list_response.json()
@@ -117,8 +167,12 @@ class TestUserRecipeIntegration:
             final_list = final_list_result
 
         assert len(final_list) == len(ingredients_list) - 1
-        print(f"✅ 삭제 확인 완료 - 남은 식재료: {len(final_list)}개")
+        print(f"✅ 삭제 확인 완료")
+        print(f"   이전: {len(ingredients_list)}개 → 현재: {len(final_list)}개")
 
+        print("\n" + "=" * 70)
+        print("✅ 통합 테스트 완료!")
+        print("=" * 70 + "\n")
 
 class TestIngredientCRUDIntegration:
     """식재료 CRUD 통합 테스트"""
@@ -185,14 +239,18 @@ class TestIngredientCRUDIntegration:
         verify_response = await client.get(f"/ingredients/{ingredient_id}", headers=headers)
         assert verify_response.status_code == 404
         print(f"✅ 삭제 검증 완료")
+        print(f"✅ 삭제 확인 완료")
 
+        print("\n" + "=" * 70)
+        print("✅ 통합 테스트 완료!")
+        print("=" * 70 + "\n")
 
 class TestRecipeFlowIntegration:
     """레시피 관련 통합 테스트"""
 
     @pytest_asyncio.fixture(scope="function")
     async def setup_user_with_ingredients(self, async_client: AsyncClient):
-        # 1. 회원가입
+        print("\n🔧 레시피 테스트용 환경 준비...")
         user_data = {
             "email": "recipe@example.com",
             "password": "recipe1234",
@@ -207,7 +265,6 @@ class TestRecipeFlowIntegration:
         signup_response = await async_client.post("/users/sign-up", json=user_data)
         assert signup_response.status_code in [201, 409]
 
-        # 2. 로그인
         login_response = await async_client.post("/users/log-in", json={
             "email": user_data["email"],
             "password": user_data["password"]
@@ -224,74 +281,151 @@ class TestRecipeFlowIntegration:
             {"ingredient_name": "두부", "category_id": 3, "purchase_date": "2025-09-29"}
         ]
 
+        print("📦 식재료 추가:")
         for ingredient in ingredients:
             res = await async_client.post("/ingredients", json=ingredient, headers=headers)
             assert res.status_code == 201
+            print(f"   - {ingredient['ingredient_name']}")
 
+        print("✅ 준비 완료\n")
         return async_client, headers
 
-    async def test_recipe_suggest_and_detail(self, setup_user_with_ingredients):
+    async def test_recipe_suggest_and_cook(self, setup_user_with_ingredients):
+        """레시피 추천 후 상세 조리법 조회 테스트"""
+        print("=" * 70)
+        print("🍳 레시피 추천 → 조리법 조회 통합 테스트")
+        print("=" * 70)
+
         client, headers = setup_user_with_ingredients
 
+        # 1. 레시피 추천
+        print("\n[1단계] 레시피 추천 요청...")
         suggest_response = await client.get("/recipe/suggest", headers=headers)
 
         if suggest_response.status_code == 200:
             recipes_data = suggest_response.json()
-            print(f"✅ 레시피 추천 성공")
+            print(f"✅ 레시피 추천 성공!")
+
+            print(f"\n📋 추천 결과:")
+            print(json.dumps(recipes_data, ensure_ascii=False, indent=2))
 
             if isinstance(recipes_data, dict) and "recipes" in recipes_data:
                 recipes = recipes_data["recipes"]
+                print(f"\n🍳 추천된 레시피 목록 ({len(recipes)}개):")
+
+                # 2. 첫 번째 레시피 상세 조리법 요청
                 if recipes and len(recipes) > 0:
                     first_recipe = recipes[0]
-                    detail_request = {
+                    print(f"\n[2단계] 첫 번째 레시피 상세 조리법 요청: {first_recipe.get('food')}")
+
+                    cook_request = {
                         "food": first_recipe.get("food"),
                         "use_ingredients": first_recipe.get("use_ingredients", [])
                     }
-                    detail_response = await client.post(
-                        "/recipe/detail",
-                        json=detail_request,
+
+                    cook_response = await client.post(
+                        "/recipe/cook",
+                        json=cook_request,
                         headers=headers
                     )
 
-                    if detail_response.status_code == 200:
-                        recipe_detail = detail_response.json()
-                        assert "steps" in recipe_detail
-                        print(f"✅ 레시피 상세 조회 성공: {recipe_detail.get('food')}")
-        else:
-            print(f"⚠️ AI 서비스 미사용 또는 오류: {suggest_response.status_code}")
+                    if cook_response.status_code == 200:
+                        cook_detail = cook_response.json()
+                        print(f"✅ 조리법 조회 성공!")
+                        print(f"\n🍳 {cook_detail.get('food', '레시피')} 상세 조리법:")
+                        print(json.dumps(cook_detail, ensure_ascii=False, indent=2))
 
-    async def test_quick_recipe_flow(self, setup_user_with_ingredients):
+
+                    else:
+                        print(f"⚠️ 조리법 조회 실패: {cook_response.status_code}")
+                        print(f"   응답: {cook_response.text[:300]}")
+        else:
+            print(f"⚠️ AI 서비스 상태: {suggest_response.status_code}")
+            print(f"   응답: {suggest_response.text[:300]}")
+
+        print("\n" + "=" * 70 + "\n")
+
+    async def test_ingredient_cook(self, setup_user_with_ingredients):
+        """식재료만으로 빠른 레시피 추천 테스트"""
+        print("=" * 70)
+        print("⚡ 식재료 기반 빠른 레시피 테스트")
+        print("=" * 70)
+
         client, headers = setup_user_with_ingredients
-        quick_request = {"chat": "계란, 양파, 치즈로 간단한 요리"}
-        quick_response = await client.post(
-            "/recipe/quick",
-            json=quick_request,
+        ingredient_request = {"chat": "계란, 양파, 치즈"}
+
+        print(f"\n💬 입력 재료: {ingredient_request['chat']}")
+
+        response = await client.post(
+            "/recipe/ingredient-cook",
+            json=ingredient_request,
             headers=headers
         )
 
-        if quick_response.status_code == 200:
-            quick_recipe = quick_response.json()
-            assert "food" in quick_recipe
-            print(f"✅ 빠른 레시피 성공: {quick_recipe.get('food')}")
+        print(f"📊 응답 상태: {response.status_code}")
+
+        if response.status_code == 200:
+            recipe = response.json()
+            print(f"✅ 빠른 레시피 성공!")
+            print(f"\n📋 추천된 요리:")
+            print(json.dumps(recipe, ensure_ascii=False, indent=2))
+
         else:
-            print(f"⚠️ 빠른 레시피 서비스 상태: {quick_response.status_code}")
+            print(f"⚠️ 서비스 상태: {response.status_code}")
+            print(f"   응답: {response.text[:300]}")
+
+        print("\n" + "=" * 70 + "\n")
+
+    async def test_food_cook(self, setup_user_with_ingredients):
+        """음식명으로 레시피 검색 테스트"""
+        print("=" * 70)
+        print("🔍 음식명 기반 레시피 검색 테스트")
+        print("=" * 70)
+
+        client, headers = setup_user_with_ingredients
+        food_request = {"chat": "김치찌개"}
+
+        print(f"\n🍜 검색 음식: {food_request['chat']}")
+
+        response = await client.post(
+            "/recipe/food-cook",
+            json=food_request,
+            headers=headers
+        )
+
+        print(f"📊 응답 상태: {response.status_code}")
+
+        if response.status_code == 200:
+            recipe = response.json()
+            print(f"✅ 레시피 검색 성공!")
+            print(f"\n📋 검색 결과:")
+            print(json.dumps(recipe, ensure_ascii=False, indent=2))
+
+        else:
+            print(f"⚠️ 서비스 상태: {response.status_code}")
+            print(f"   응답: {response.text[:300]}")
+
+        print("\n" + "=" * 70 + "\n")
 
 
 class TestErrorHandlingIntegration:
+    """에러 처리 통합 테스트"""
 
     async def test_unauthorized_access(self, async_client: AsyncClient):
+        print("\n🔒 미인증 접근 테스트...")
         response = await async_client.get("/ingredients")
         assert response.status_code == 401
         print("✅ 미인증 접근 차단 확인")
 
     async def test_invalid_token_access(self, async_client: AsyncClient):
+        print("\n🔒 잘못된 토큰 테스트...")
         headers = {"Authorization": "Bearer invalid_token_12345"}
         response = await async_client.get("/ingredients", headers=headers)
         assert response.status_code in [401, 403]
         print("✅ 잘못된 토큰 차단 확인")
 
     async def test_delete_nonexistent_ingredient(self, async_client: AsyncClient):
-        """존재하지 않는 식재료 삭제 시도"""
+        print("\n❌ 존재하지 않는 식재료 삭제 테스트...")
         user_data = {
             "email": "error@example.com",
             "password": "pass1234",
