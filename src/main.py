@@ -17,9 +17,10 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
 origins = [
-    "http://localhost:8000"
-    "http://localhost:5173"
-    "http://172.20.10.2:5173"
+    "http://localhost:8000",
+    "http://localhost:5173",
+    "http://172.20.10.2:5173",
+    "https://web-react-mg87or0t2e08bd72.sel3.cloudtype.app"
 ]
 
 app.add_middleware(
