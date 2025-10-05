@@ -6,6 +6,8 @@ from botocore.exceptions import BotoCoreError, NoCredentialsError
 from core.config import settings
 from exception.board_exception import BoardNotFoundException, AwsError, CommentNotFoundException
 from exception.user_exception import HaveNotPermissionException
+from schema.response import BoardDetailResponse, BoardAuthor, BoardSummaryResponse
+
 
 class BoardService:
     def __init__(self, user_repo, board_repo, user_service, access_token: str, req: Request,):
@@ -63,28 +65,44 @@ class BoardService:
         board = await self.board_repo.get_board(board_id)
         if not board:
             raise BoardNotFoundException
-        return board
+
+        image_urls = [image.image_url for image in board.images]
+
+        return BoardDetailResponse(
+            id=board.id,
+            author=BoardAuthor(
+                user_id=board.user_id,
+                nickname=board.user.nickname
+            ),
+            title=board.title,
+            content=board.content,
+            like_count=board.like_count,
+            created_at=board.created_at,
+            image_urls=image_urls
+        )
 
     async def get_all_boards(self, skip: int, limit: int, title: str | None = None, nickname: str | None = None):
-        board_data = await self.board_repo.get_all_boards(skip=skip, limit=limit, title=title, nickname=nickname)
+        board_list = await self.board_repo.get_all_boards(skip=skip, limit=limit, title=title, nickname=nickname)
 
-        result_boards = []
-        for board, nickname in board_data:
-            result_boards.append({
-                "id": board.id,
-                "title": board.title,
-                "nickname": nickname,
-                "like_count": board.like_count,
-                "exist_image": board.exist_image,
-                "created_at": board.created_at,
-            })
-
-        return result_boards
+        return [
+            BoardSummaryResponse(
+                id=board.id,
+                title=board.title,
+                author=BoardAuthor(
+                    user_id=board.user_id,
+                    nickname=board.user.nickname
+                ),
+                like_count=board.like_count,
+                exist_image=board.exist_image,
+                created_at=board.created_at
+            )
+            for board in board_list
+        ]
 
     async def soft_delete_board(self, board_id: int):
         current_user = await self.get_current_user()
 
-        board = await self.get_board(board_id)
+        board = await self.board_repo.get_board(board_id)
         if not board:
             raise BoardNotFoundException
 

@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Form, UploadFile, Depends, Query
+from typing import List
 
 from core.di import get_board_service
+from schema.response import BoardDetailResponse, BoardSummaryResponse
 from service.board_service import BoardService
 
 router = APIRouter(prefix="/board", tags=["Board"])
 
-@router.get("/list", status_code=200)
-async def get_all_boards(   # 검색 및 게시글 list 확인
+@router.get("/list", response_model=List[BoardSummaryResponse])
+async def get_all_boards(
         skip: int = Query(0, ge=0),
         limit: int = Query(10, ge=1),
         title: str | None = None,
@@ -23,7 +25,7 @@ async def create_board(
 ):
     return await board_service.create_board(title, content, images)
 
-@router.get("/{board_id}", status_code=200)
+@router.get("/{board_id}", response_model=BoardDetailResponse)
 async def get_board(
         board_id: int,
         board_service: BoardService = Depends(get_board_service)

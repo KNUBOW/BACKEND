@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import desc, delete
+from sqlalchemy.orm import selectinload
 
 from database.orm import Board, BoardImage, User, BoardLike, BoardComment
 from database.repository.base_repository import commit_with_error_handling
@@ -26,21 +27,36 @@ class BoardRepository:
         return board
 
     async def get_board(self, board_id: int) -> Board | None:
-        result = await self.session.execute(select(Board).where(Board.id == board_id, Board.status == True))
+        query = (
+            select(Board)
+            .options(
+                selectinload(Board.user),
+                selectinload(Board.images)
+            )
+            .where(Board.id == board_id, Board.status == True)
+        )
+        result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_all_boards(self, skip: int, limit: int, title: str | None = None, nickname: str | None = None) -> list:
-        stmt = select(Board, User.nickname).join(User, Board.user_id == User.id).where(Board.status == True)
+    async def get_all_boards(self, skip: int, limit: int, title: str | None = None, nickname: str | None = None) -> \
+    list[Board]:
+        stmt = select(Board).options(selectinload(Board.user))
+
+        if nickname:
+            stmt = stmt.join(User, Board.user_id == User.id)
+
+        stmt = stmt.where(Board.status == True)
+
         if title:
             stmt = stmt.where(Board.title.like(f"%{title}%"))
-
         if nickname:
             stmt = stmt.where(User.nickname.like(f"%{nickname}%"))
 
         stmt = stmt.order_by(desc(Board.created_at)).offset(skip).limit(limit)
 
         result = await self.session.execute(stmt)
-        return result.all()
+
+        return result.scalars().all()
 
     async def soft_delete_board(self, board_id: int):
         board = await self.get_board(board_id)
