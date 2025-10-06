@@ -122,3 +122,10 @@ class LikeRecipe(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
 
     user = relationship("User", back_populates="like_recipe")
+
+class FoodRanking(Base):
+    __tablename__ = "food_ranking"
+
+    id = Column(Integer, primary_key=True, index=True)
+    food_name = Column(String(40), nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)

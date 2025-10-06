@@ -59,3 +59,14 @@ async def delete_saved_recipe(
     recipe_service: RecipeManagementService = Depends(get_recipe_management_service)
 ):
     await recipe_service.delete_recipe(recipe_id)
+
+"""
+레시피 랭킹 관련 라우터
+"""
+
+@router.get("/ranking", status_code=200)
+async def recipe_ranking(
+    recipe_service: RecipeManagementService = Depends(get_recipe_management_service),
+    limit: int = 20
+):
+    return await recipe_service.get_food_ranking(limit)

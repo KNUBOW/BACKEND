@@ -6,6 +6,8 @@ from sqlalchemy import and_, update
 
 from database.orm import LikeRecipe
 from database.repository.base_repository import commit_with_error_handling
+from sqlalchemy import func
+from database.orm import FoodRanking
 
 
 class RecipeRepository:
@@ -65,3 +67,27 @@ class RecipeRepository:
         await commit_with_error_handling(self.session, context="레시피 삭제")
 
         return result.rowcount > 0
+
+    async def log_food_ranking(self, food_name: str) -> None:   # food_ranking 로그 수집
+        if not food_name:
+            return
+        entry = FoodRanking(food_name=food_name)
+        self.session.add(entry)
+        await commit_with_error_handling(self.session, context="음식 랭킹 기록")
+
+    async def get_food_ranking(self, limit: int = 20) -> List[Dict[str, Any]]:  # ranking 조회
+        stmt = (
+            select(
+                FoodRanking.food_name,
+                func.count(FoodRanking.id).label("count")
+            )
+            .group_by(FoodRanking.food_name)
+            .order_by(func.count(FoodRanking.id).desc(), FoodRanking.food_name.asc())
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        rows = result.all()
+        return [
+            {"food_name": row.food_name, "count": row.count}
+            for row in rows
+        ]

@@ -70,12 +70,14 @@ def get_foodthing_service(
     user_service: UserService = Depends(get_user_service),
     user_repo: UserRepository = Depends(get_user_repo),
     access_token: str = Depends(get_access_token),
+    recipe_repo: RecipeRepository = Depends(get_recipe_repository),
 ) -> FoodThingAIService:
     return FoodThingAIService(
         user_service=user_service,
         user_repo=user_repo,
         access_token=access_token,
-        req=request
+        req=request,
+        recipe_repo=recipe_repo
     )
 
 def get_recipe_management_service(

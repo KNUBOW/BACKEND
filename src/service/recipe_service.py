@@ -12,7 +12,7 @@ from exception.user_exception import TokenExpiredException, UserNotFoundExceptio
 
 
 class FoodThingAIService:   # 레시피 추출 관련 서비스
-    def __init__(self, user_service, user_repo, access_token: str, req: Request):
+    def __init__(self, user_service, user_repo, access_token: str, req: Request, recipe_repo=None):
         self.ollama_base_url = settings.OLLAMA_URL
         self.model_name = settings.OLLAMA_MODEL_NAME
         self.num_predict = 1000
@@ -20,6 +20,7 @@ class FoodThingAIService:   # 레시피 추출 관련 서비스
         self.user_repo = user_repo
         self.access_token = access_token
         self.req = req
+        self.recipe_repo = recipe_repo
 
         self.openai_api_key = settings.OPENAI_API_KEY.get_secret_value()
         self.openai_model_name = "gpt-4o-mini"
@@ -188,7 +189,17 @@ class FoodThingAIService:   # 레시피 추출 관련 서비스
 
     async def get_search_recipe(self, chat: str) -> Dict[str, Any]:
         prompt = PromptBuilder.build_search_prompt(chat)
-        return await self._call_ollama(prompt)
+        result = await self._call_ollama(prompt)
+        try:
+            if self.recipe_repo is not None:
+                food_name = (result.get("food") or "").strip() if isinstance(result, dict) else ""
+                if not food_name:
+                    food_name = chat.strip()
+                if food_name:
+                    await self.recipe_repo.log_food_ranking(food_name)
+        except Exception:
+            pass
+        return result
 
 class RecipeManagementService:  # 레시피 CRUD 서비스
 
@@ -213,7 +224,10 @@ class RecipeManagementService:  # 레시피 CRUD 서비스
 
     async def save_recipe(self, recipe_data: dict):
         user = await self.get_current_user()
-        return await self.recipe_repo.save_recipe_data(user.id, recipe_data)
+        saved = await self.recipe_repo.save_recipe_data(user.id, recipe_data)
+        food_name = recipe_data.get("food")
+        await self.recipe_repo.log_food_ranking(food_name)
+        return saved
 
     async def get_saved_recipes(self):
         user = await self.get_current_user()
@@ -226,3 +240,6 @@ class RecipeManagementService:  # 레시피 CRUD 서비스
         if not deleted:
             from exception.recipe_exception import RecipeNotFoundException
             raise RecipeNotFoundException()
+
+    async def get_food_ranking(self, limit: int = 20):
+        return await self.recipe_repo.get_food_ranking(limit)
